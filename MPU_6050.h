@@ -8,6 +8,7 @@ Version: 1.0.3
 #ifndef MPU6050_h
 #define MPU6050_h
 #include <stdint.h>
+#include <movingAvg.h> 
 
 #define GYRO_PART 0.985
 #define ACC_PART (1.0 - GYRO_PART)
@@ -101,7 +102,7 @@ typedef enum
 class MPU6050
 {
     public:
-
+                MPU6050();
 //=====================Start Up Operations==========================================//
                 bool begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t range = MPU6050_RANGE_2G, int mpua = MPU6050_ADDRESS);
                 void setClockSource(mpu6050_clockSource_t source);                                                                      
@@ -199,6 +200,8 @@ class MPU6050
                     float comp_angle_x, comp_angle_y;
                     float acc_x_filtered, acc_y_filtered, acc_z_filtered;
                     float acc_roll, acc_pitch, gyro_roll, gyro_pitch, gyro_yaw, roll, pitch, yaw;
+                    movingAvg mov_roll;
+                    movingAvg mov_pitch;
 //                    MedianFilter acc_x_filter, acc_y_filter, acc_z_filter;
                 
                     uint32_t gyro_update_timer, accel_update_timer, combination_update_timer;
