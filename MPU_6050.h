@@ -173,7 +173,6 @@ class MPU6050
                 uint8_t readRegister8(uint8_t reg);                                                                                                            
                 void writeRegister8(uint8_t reg, uint8_t value);                                                                                         
 
-
                 int16_t readRegister16(uint8_t reg);                                                                                                         
                 void writeRegister16(uint8_t reg, int16_t value);                                                                                        
 
@@ -196,23 +195,24 @@ class MPU6050
                     int mean_ax,mean_ay,mean_az,mean_gx,mean_gy,mean_gz,state=0;
                     int ax_offset,ay_offset,az_offset,gx_offset,gy_offset,gz_offset;
 
-
                     float comp_angle_x, comp_angle_y;
                     float acc_x_filtered, acc_y_filtered, acc_z_filtered;
                     float acc_roll, acc_pitch, gyro_roll, gyro_pitch, gyro_yaw, roll, pitch, yaw;
                     movingAvg mov_roll;
                     movingAvg mov_pitch;
 //                    MedianFilter acc_x_filter, acc_y_filter, acc_z_filter;
-                
+
                     uint32_t gyro_update_timer, accel_update_timer, combination_update_timer;
                     unsigned long timer = 0;
                     float timeStep = 0.01;
-                    //A Matrix
+
+                    //Scale Matrix - A
                     float A[3][3] = { {0.996185f, 0.012151f, 0.001020f} ,
-                                             {0.012151f, 0.999230f, -0.001506f} ,
-                                             {0.001020f, -0.001506f, 0.983975f}
-                                           };
-                    //Bias Vector
+                                    {0.012151f, 0.999230f, -0.001506f} ,
+                                    {0.001020f, -0.001506f, 0.983975f}
+                                    };
+
+                    //Bias Vector - B
                     float B[3] = {0.044777f, -0.000109f, -0.124497f};
 
                 

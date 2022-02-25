@@ -10,14 +10,13 @@
 #include <Arduino.h>
 #include "MPU_6050.h"
 
+float movingAverage(float value)
+{
 
-
-float movingAverage(float value) {
-  const byte nvalues = 8;             // Moving average window size
-
-  static byte current = 0;            // Index for current value
-  static byte cvalues = 0;            // Count of values read (<= nvalues)
-  static float sum = 0;               // Rolling sum
+  const byte nvalues = 8;  // Moving average window size
+  static byte current = 0; // Index for current value
+  static byte cvalues = 0; // Count of values read (<= nvalues)
+  static float sum = 0;    // Rolling sum
   static float values[nvalues];
 
   sum += value;
@@ -26,7 +25,7 @@ float movingAverage(float value) {
   if (cvalues == nvalues)
     sum -= values[current];
 
-  values[current] = value;          // Replace the oldest with the latest
+  values[current] = value; // Replace the oldest with the latest
 
   if (++current >= nvalues)
     current = 0;
@@ -37,18 +36,19 @@ float movingAverage(float value) {
   return sum / cvalues;
 }
 
-
-
 MPU6050::MPU6050() : mov_roll(10), mov_pitch(10)
 {
-
 }
 
 bool MPU6050::begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t range = MPU6050_RANGE_2G, int mpua = MPU6050_ADDRESS)
 {
   //  Serial.println("IMU Begin");
+
+  // Initializing MPU
   mpuAddress = mpua;
   Wire.begin();
+
+  // Moving Average for Roll and pitch Values
   mov_roll.begin();
   mov_pitch.begin();
 
@@ -63,9 +63,11 @@ bool MPU6050::begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t
   tg.YAxis = 0;
   tg.ZAxis = 0;
   actualThreshold = 0;
+
   // Set Clock Source
   setClockSource(MPU6050_CLOCK_PLL_XGYRO);
 
+  // Set scale and Range for Gyro and Accelero respectively
   setScale(scale);
   setRange(range);
 
@@ -75,30 +77,28 @@ bool MPU6050::begin(mpu6050_dps_t scale = MPU6050_SCALE_2000DPS, mpu6050_range_t
   return true;
 }
 
-
 void MPU6050::setRange(mpu6050_range_t range)
 {
   uint8_t value;
 
-  //What is the logic of setting rangePerDigit here ?
+  // What is the logic of setting rangePerDigit here ?
   switch (range)
   {
-    case MPU6050_RANGE_2G:
-      rangePerDigit = .000061f;
-      break;
-    case MPU6050_RANGE_4G:
-      rangePerDigit = .000122f;
-      break;
-    case MPU6050_RANGE_8G:
-      rangePerDigit = .000244f;
-      break;
-    case MPU6050_RANGE_16G:
-      rangePerDigit = .0004882f;
-      break;
-    default:
-      break;
+  case MPU6050_RANGE_2G:
+    rangePerDigit = .000061f;
+    break;
+  case MPU6050_RANGE_4G:
+    rangePerDigit = .000122f;
+    break;
+  case MPU6050_RANGE_8G:
+    rangePerDigit = .000244f;
+    break;
+  case MPU6050_RANGE_16G:
+    rangePerDigit = .0004882f;
+    break;
+  default:
+    break;
   }
-
 
   value = readRegister8(MPU6050_REG_ACCEL_CONFIG);
   value &= 0b11100111;
@@ -106,27 +106,26 @@ void MPU6050::setRange(mpu6050_range_t range)
   writeRegister8(MPU6050_REG_ACCEL_CONFIG, value);
 }
 
-
 void MPU6050::setScale(mpu6050_dps_t scale)
 {
   uint8_t value;
 
   switch (scale)
   {
-    case MPU6050_SCALE_250DPS:
-      dpsPerDigit = .007633f;
-      break;
-    case MPU6050_SCALE_500DPS:
-      dpsPerDigit = .015267f;
-      break;
-    case MPU6050_SCALE_1000DPS:
-      dpsPerDigit = .030487f;
-      break;
-    case MPU6050_SCALE_2000DPS:
-      dpsPerDigit = .060975f;
-      break;
-    default:
-      break;
+  case MPU6050_SCALE_250DPS:
+    dpsPerDigit = .007633f;
+    break;
+  case MPU6050_SCALE_500DPS:
+    dpsPerDigit = .015267f;
+    break;
+  case MPU6050_SCALE_1000DPS:
+    dpsPerDigit = .030487f;
+    break;
+  case MPU6050_SCALE_2000DPS:
+    dpsPerDigit = .060975f;
+    break;
+  default:
+    break;
   }
 
   value = readRegister8(MPU6050_REG_GYRO_CONFIG);
@@ -134,7 +133,6 @@ void MPU6050::setScale(mpu6050_dps_t scale)
   value |= (scale << 3);
   writeRegister8(MPU6050_REG_GYRO_CONFIG, value);
 }
-
 
 mpu6050_dps_t MPU6050::getScale(void)
 {
@@ -170,78 +168,84 @@ void MPU6050::setClockSource(mpu6050_clockSource_t source)
   writeRegister8(MPU6050_REG_PWR_MGMT_1, value);
 }
 
-
-
-
 //=====================Update Sensor Values=============================//
+
 bool MPU6050::update_sensor_values(void)
 {
   bool updated = false;
 
-  if ((millis() - accel_update_timer) > 20) {    // ~50 hz
+  if ((millis() - accel_update_timer) > 20)  // ~50 hz
+  { 
     update_accel();
     accel_update_timer = millis();
     updated = true;
   }
 
-  if ((micros() - gyro_update_timer) > 1300) {   // ~800 Hz
+  if ((micros() - gyro_update_timer) > 1300)  // ~800 Hz
+  { 
     update_gyro();
     gyro_update_timer = micros();
     updated = true;
   }
 
-  if (updated) {
+  if (updated)
+  {
     combine();
   }
 
   return updated;
 }
 
+void MPU6050::update_accel()
+{
 
-void MPU6050::update_accel() {
   Vector C;
-  Vector scaled_acc   = readScaledAccel();
+  Vector scaled_acc = readScaledAccel();
 
+  // Vector (H-b)
   Vector h_b;
   h_b.XAxis = scaled_acc.XAxis - B[0];
   h_b.YAxis = scaled_acc.YAxis - B[1];
   h_b.ZAxis = scaled_acc.ZAxis - B[2];
 
-  C.XAxis = A[0][0] * h_b.XAxis + A[0][1] * h_b.YAxis +  A[0][2] * h_b.ZAxis;
-  C.YAxis = A[1][0] * h_b.XAxis + A[1][1] * h_b.YAxis +  A[1][2] * h_b.ZAxis;
-  C.ZAxis = A[2][0] * h_b.XAxis + A[2][1] * h_b.YAxis +  A[2][2] * h_b.ZAxis;
+  // A' = A* (H-b)
+  C.XAxis = A[0][0] * h_b.XAxis + A[0][1] * h_b.YAxis + A[0][2] * h_b.ZAxis;
+  C.YAxis = A[1][0] * h_b.XAxis + A[1][1] * h_b.YAxis + A[1][2] * h_b.ZAxis;
+  C.ZAxis = A[2][0] * h_b.XAxis + A[2][1] * h_b.YAxis + A[2][2] * h_b.ZAxis;
 
+  // Ay = Taninv(-Ax/(Ay**2 + Az**2))
   acc_pitch = atan2(-C.XAxis, sqrt(C.YAxis * C.YAxis + C.ZAxis * C.ZAxis)) * 180.0 / M_PI;
-  acc_roll = (atan2(C.YAxis,   C.ZAxis) * 180.0) / M_PI;
+
+  // Ax = Taninv(Ay / Az)
+  acc_roll = (atan2(C.YAxis, C.ZAxis) * 180.0) / M_PI;
 }
 
-void MPU6050::update_gyro() {
+void MPU6050::update_gyro()
+{
 
   timer = millis();
-  Vector norm_gyro   = readNormalizeGyro();
+  Vector norm_gyro = readNormalizeGyro();
 
   gyro_pitch = pitch + norm_gyro.YAxis * timeStep;
-  gyro_roll =    roll + norm_gyro.XAxis * timeStep;
-  gyro_yaw =   yaw + norm_gyro.ZAxis * timeStep;
-
-
+  gyro_roll = roll + norm_gyro.XAxis * timeStep;
+  gyro_yaw = yaw + norm_gyro.ZAxis * timeStep;
 }
 
-void MPU6050::combine() {
-  //Angle calculation through Complementary filter
+void MPU6050::combine()
+{
 
-  float dt = (float)(micros() - combination_update_timer);
+  // float dt = (float)(micros() - combination_update_timer);
 
+  // Angle calculation through Complementary filter
   roll = GYRO_PART * gyro_roll + ACC_PART * acc_roll;
   pitch = GYRO_PART * gyro_pitch + ACC_PART * acc_pitch;
   yaw = gyro_yaw;
 
-  //  roll = mov_roll.reading(roll);
-  //  pitch = mov_pitch.reading(pitch);
+  // Calculating Moving Average
   roll = movingAverage(roll);
   pitch = movingAverage(pitch);
 
-  combination_update_timer = micros();
+  // combination_update_timer = micros();
   delay((timeStep * 1000) - (millis() - timer));
 }
 
@@ -261,8 +265,6 @@ int16_t MPU6050::getAccelOffsetZ(void)
   return readRegister16(MPU6050_REG_ACCEL_ZOFFS_H);
 }
 
-
-
 int16_t MPU6050::getGyroOffsetX(void)
 {
   return readRegister16(MPU6050_REG_GYRO_XOFFS_H);
@@ -277,9 +279,6 @@ int16_t MPU6050::getGyroOffsetZ(void)
 {
   return readRegister16(MPU6050_REG_GYRO_ZOFFS_H);
 }
-
-
-
 
 //=======================Set Accelaration and Gyro Offsets==========================//
 
@@ -298,7 +297,6 @@ void MPU6050::setAccelOffsetZ(int16_t offset)
   writeRegister16(MPU6050_REG_ACCEL_ZOFFS_H, offset);
 }
 
-
 void MPU6050::setGyroOffsetX(int16_t offset)
 {
   writeRegister16(MPU6050_REG_GYRO_XOFFS_H, offset);
@@ -314,13 +312,11 @@ void MPU6050::setGyroOffsetZ(int16_t offset)
   writeRegister16(MPU6050_REG_GYRO_ZOFFS_H, offset);
 }
 
-
 //=====================Sleep========================================//
 void MPU6050::setSleepEnabled(bool state)
 {
   writeRegisterBit(MPU6050_REG_PWR_MGMT_1, 6, state);
 }
-
 
 //=====================Reading Accelaration========================================//
 
@@ -346,7 +342,6 @@ Vector MPU6050::readRawAccel(void)
 
   return ra;
 }
-
 
 Vector MPU6050::readNormalizeAccel(void)
 {
@@ -417,7 +412,6 @@ void MPU6050::calibrateGyro(uint8_t samples)
   }
 }
 
-
 // Get current threshold value
 uint8_t MPU6050::getThreshold(void)
 {
@@ -439,7 +433,8 @@ void MPU6050::setThreshold(uint8_t multiple)
     tg.XAxis = th.XAxis * multiple;
     tg.YAxis = th.YAxis * multiple;
     tg.ZAxis = th.ZAxis * multiple;
-  } else
+  }
+  else
   {
     // No threshold
     tg.XAxis = 0;
@@ -451,7 +446,6 @@ void MPU6050::setThreshold(uint8_t multiple)
   actualThreshold = multiple;
 }
 
-
 //=====================Reading Gyro========================================//
 Vector MPU6050::readRawGyro(void)
 {
@@ -462,8 +456,8 @@ Vector MPU6050::readRawGyro(void)
   Wire.beginTransmission(mpuAddress);
   Wire.requestFrom(mpuAddress, 6);
 
-  while (Wire.available() < 6);
-
+  while (Wire.available() < 6)
+    ;
 
   uint8_t xha = Wire.read();
   uint8_t xla = Wire.read();
@@ -471,7 +465,6 @@ Vector MPU6050::readRawGyro(void)
   uint8_t yla = Wire.read();
   uint8_t zha = Wire.read();
   uint8_t zla = Wire.read();
-
 
   rg.XAxis = xha << 8 | xla;
   rg.YAxis = yha << 8 | yla;
@@ -489,7 +482,8 @@ Vector MPU6050::readNormalizeGyro(void)
     ng.XAxis = (rg.XAxis - dg.XAxis) * dpsPerDigit;
     ng.YAxis = (rg.YAxis - dg.YAxis) * dpsPerDigit;
     ng.ZAxis = (rg.ZAxis - dg.ZAxis) * dpsPerDigit;
-  } else
+  }
+  else
   {
     ng.XAxis = rg.XAxis * dpsPerDigit;
     ng.YAxis = rg.YAxis * dpsPerDigit;
@@ -498,14 +492,16 @@ Vector MPU6050::readNormalizeGyro(void)
 
   if (actualThreshold)
   {
-    if (abs(ng.XAxis) < tg.XAxis) ng.XAxis = 0;
-    if (abs(ng.YAxis) < tg.YAxis) ng.YAxis = 0;
-    if (abs(ng.ZAxis) < tg.ZAxis) ng.ZAxis = 0;
+    if (abs(ng.XAxis) < tg.XAxis)
+      ng.XAxis = 0;
+    if (abs(ng.YAxis) < tg.YAxis)
+      ng.YAxis = 0;
+    if (abs(ng.ZAxis) < tg.ZAxis)
+      ng.ZAxis = 0;
   }
 
   return ng;
 }
-
 
 //===============================Calibrate Gyro and Accelerometer==========================//
 
@@ -517,21 +513,24 @@ void MPU6050::setAccelOffset()
   setAccelOffsetY(0);
   setAccelOffsetZ(0);
 
-  if (state == 0) {
+  if (state == 0)
+  {
     //    Serial.println("\nReading Accel sensors for first time...");
     meansensorsAcc();
     state++;
     delay(1000);
   }
 
-  if (state == 1) {
+  if (state == 1)
+  {
     //    Serial.println("\nCalculating offsets...");
     calibrationAcc();
     state++;
     delay(1000);
   }
 
-  if (state == 2) {
+  if (state == 2)
+  {
     meansensorsAcc();
     //    Serial.println("\nFINISHED!");
     //    Serial.print("\nSensor readings with offsets:\t");
@@ -559,69 +558,72 @@ void MPU6050::setAccelOffset()
   }
 }
 
-void MPU6050:: meansensorsAcc() {
+void MPU6050::meansensorsAcc()
+{
   long i = 0, buff_ax = 0, buff_ay = 0, buff_az = 0, buff_gx = 0, buff_gy = 0, buff_gz = 0;
 
-  while (i < (buffersize + 101)) {
+  while (i < (buffersize + 101))
+  {
 
     Vector raw_Acc = readRawAccel();
     ax = raw_Acc.XAxis;
     ay = raw_Acc.YAxis;
     az = raw_Acc.ZAxis;
 
-    if (i > 100 && i <= (buffersize + 100)) { //First 100 measures are discarded
+    if (i > 100 && i <= (buffersize + 100))
+    { // First 100 measures are discarded
       buff_ax = buff_ax + ax;
       buff_ay = buff_ay + ay;
       buff_az = buff_az + az;
-
     }
-    if (i == (buffersize + 100)) {
+    if (i == (buffersize + 100))
+    {
       mean_ax = buff_ax / buffersize;
       mean_ay = buff_ay / buffersize;
       mean_az = buff_az / buffersize;
-
     }
     i++;
-    delay(2); //Needed so we don't get repeated measures
+    delay(2); // Needed so we don't get repeated measures
   }
 }
 
-void MPU6050:: calibrationAcc() {
+void MPU6050::calibrationAcc()
+{
   ax_offset = -mean_ax / 8;
   ay_offset = -mean_ay / 8;
   az_offset = (16384 - mean_az) / 8;
 
-
-  while (1) {
+  while (1)
+  {
     int ready = 0;
     setAccelOffsetX(ax_offset);
     setAccelOffsetY(ay_offset);
     setAccelOffsetZ(az_offset);
 
-
-
     meansensorsAcc();
     //    Serial.println("...");
 
-    if (abs(mean_ax) <= acel_deadzone) ready++;
-    else ax_offset = ax_offset - mean_ax / acel_deadzone;
+    if (abs(mean_ax) <= acel_deadzone)
+      ready++;
+    else
+      ax_offset = ax_offset - mean_ax / acel_deadzone;
 
-    if (abs(mean_ay) <= acel_deadzone) ready++;
-    else ay_offset = ay_offset - mean_ay / acel_deadzone;
+    if (abs(mean_ay) <= acel_deadzone)
+      ready++;
+    else
+      ay_offset = ay_offset - mean_ay / acel_deadzone;
 
-    if (abs(16384 - mean_az) <= acel_deadzone) ready++;
-    else az_offset = az_offset + (16384 - mean_az) / acel_deadzone;
+    if (abs(16384 - mean_az) <= acel_deadzone)
+      ready++;
+    else
+      az_offset = az_offset + (16384 - mean_az) / acel_deadzone;
 
-
-
-    if (ready == 3) break;
+    if (ready == 3)
+      break;
   }
 }
 
-
 //==================Calibrate Gyro========================//
-
-
 
 void MPU6050::setGyroOffset()
 {
@@ -631,21 +633,24 @@ void MPU6050::setGyroOffset()
   setGyroOffsetY(0);
   setGyroOffsetZ(0);
 
-  if (state == 0) {
+  if (state == 0)
+  {
     //    Serial.println("\nReading Gyro sensors for first time...");
     meansensorsGyro();
     state++;
     delay(1000);
   }
 
-  if (state == 1) {
+  if (state == 1)
+  {
     //    Serial.println("\nCalculating offsets...");
     calibrationGyro();
     state++;
     delay(1000);
   }
 
-  if (state == 2) {
+  if (state == 2)
+  {
     meansensorsGyro();
     //    Serial.println("\nFINISHED!");
     //    Serial.print("\nSensor readings with offsets:\t");
@@ -672,46 +677,47 @@ void MPU6050::setGyroOffset()
   }
 }
 
-void MPU6050:: meansensorsGyro() {
+void MPU6050::meansensorsGyro()
+{
   long i = 0, buff_gx = 0, buff_gy = 0, buff_gz = 0;
 
-  while (i < (buffersize + 101)) {
+  while (i < (buffersize + 101))
+  {
 
     Vector raw_Gyro = readRawGyro();
     gx = raw_Gyro.XAxis;
     gy = raw_Gyro.YAxis;
     gz = raw_Gyro.ZAxis;
 
-    if (i > 100 && i <= (buffersize + 100)) { //First 100 measures are discarded
+    if (i > 100 && i <= (buffersize + 100))
+    { // First 100 measures are discarded
       buff_gx = buff_gx + gx;
       buff_gy = buff_gy + gy;
       buff_gz = buff_gz + gz;
-
     }
-    if (i == (buffersize + 100)) {
+    if (i == (buffersize + 100))
+    {
       mean_gx = buff_gx / buffersize;
       mean_gy = buff_gy / buffersize;
       mean_gz = buff_gz / buffersize;
-
     }
     i++;
-    delay(2); //Needed so we don't get repeated measures
+    delay(2); // Needed so we don't get repeated measures
   }
 }
 
-void MPU6050:: calibrationGyro() {
+void MPU6050::calibrationGyro()
+{
   gx_offset = -mean_gx / 4;
   gy_offset = -mean_gy / 4;
   gz_offset = -mean_gz / 4;
 
-
-  while (1) {
+  while (1)
+  {
     int ready = 0;
     setGyroOffsetX(gx_offset);
     setGyroOffsetY(gy_offset);
     setGyroOffsetZ(gz_offset);
-
-
 
     meansensorsGyro();
     //    Serial.println("...");
@@ -725,21 +731,23 @@ void MPU6050:: calibrationGyro() {
     //    Serial.println(ready);
     if (abs(mean_gx) <= giro_deadzone)
       ready++;
-    else gx_offset = gx_offset - mean_gx / (giro_deadzone + 1);
+    else
+      gx_offset = gx_offset - mean_gx / (giro_deadzone + 1);
 
     if (abs(mean_gy) <= giro_deadzone)
       ready++;
-    else gy_offset = gy_offset - mean_gy / (giro_deadzone + 1);
+    else
+      gy_offset = gy_offset - mean_gy / (giro_deadzone + 1);
 
     if (abs(mean_gz) <= giro_deadzone)
       ready++;
-    else gz_offset = gz_offset - mean_gz / (giro_deadzone + 1);
+    else
+      gz_offset = gz_offset - mean_gz / (giro_deadzone + 1);
 
-
-    if (ready == 3) break;
+    if (ready == 3)
+      break;
   }
 }
-
 
 //===============================Setting and Reading from Registers==========================//
 
@@ -758,7 +766,6 @@ uint8_t MPU6050::readRegister8(uint8_t reg)
 
   return value;
 }
-
 
 void MPU6050::writeRegister8(uint8_t reg, uint8_t value)
 {
@@ -788,7 +795,6 @@ int16_t MPU6050::readRegister16(uint8_t reg)
   return value;
 }
 
-
 void MPU6050::writeRegister16(uint8_t reg, int16_t value)
 {
   Wire.beginTransmission(mpuAddress);
@@ -814,7 +820,8 @@ void MPU6050::writeRegisterBit(uint8_t reg, uint8_t pos, bool state)
   if (state)
   {
     value |= (1 << pos);
-  } else
+  }
+  else
   {
     value &= ~(1 << pos);
   }

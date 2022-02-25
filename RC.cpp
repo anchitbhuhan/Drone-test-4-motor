@@ -12,29 +12,47 @@ const byte address[6] = "00001";
 
 void RC::init()
 {
-  //  Serial.println("RC Init");
+  //Create Radio object
   m_rad = new RF24(7, 8);
+
+  //Radio Begin
   m_rad->begin();
+
+  //Open reading pipe
   m_rad->openReadingPipe(0, address);
+
+  //Auto Acknowledgement
   m_rad->setAutoAck(false);
+
+  //Set Data Rate
   m_rad->setDataRate(RF24_2MBPS);
+
+  //Set PA Level
   m_rad->setPALevel(RF24_PA_MIN);
-  m_rad->startListening(); //  Set the module as receiver
+
+  //Set to Receiving Mode
+  m_rad->startListening();
+
+  //Reset Data to Default
   resetData();
+  
+  //  Serial.println("RC Init");
 
 }
 
 bool RC::isAvailable(FlightController* fc)
 {
+
   bool isradioAvailable = m_rad->available();
 
   if (isradioAvailable) {
     m_rad->read(&data, sizeof(Data_Package));
     lastReceiveTime = millis();
-//    Serial.println("Radio available");
+
+  // Serial.println("Radio available");
   }
   else {
-//    Serial.println("Radio unavailable!");
+  // Serial.println("Radio unavailable!");
   }
 
   currentTime = millis();
@@ -49,25 +67,17 @@ bool RC::isAvailable(FlightController* fc)
 
 void RC::RC_data_to_command (Data_Package* dp, Command* command)
 {
-  int scale = 1;
-
-  if (dp->tSwitch1 == 1)
-  {
-    scale = 0.5;
-  }
-
+  
+  // Mapping RC values to Motor Outputs
   command->thrust =map(dp->j1PotX, 0, 255, 0, MOTOR_MAX );
   command->yaw = map(dp->j1PotY, 0, 255, 0, MOTOR_MAX );
   command->pitch = map(dp->j2PotX, 0, 255, 0, MOTOR_MAX);
   command->roll = map(dp->j2PotY, 0, 255, 0, MOTOR_MAX);
-  command->isOutdoor = dp->tSwitch1;
-
-  //  print(dp);
-  //  Serial.println(command->thrust);
-  //    printCommand(command);
+  command->isArmed = dp->tSwitch1;
 }
 
 void RC::resetData() {
+
   // Reset the values when there is no radio connection - Set initial default values
   data.j1PotX = 127;
   data.j1PotY = 127;
@@ -91,7 +101,7 @@ void RC::print(Data_Package *dp)
 
 void RC::printCommand(Command *cmd)
 {
-  //  Serial.print("j1PotX: ");
+
   if (cmd != NULL)
   {
     //    Serial.print(cmd->thrust);

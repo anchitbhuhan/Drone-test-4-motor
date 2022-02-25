@@ -36,6 +36,7 @@ class MotorController
     int escPin3  = A2;
     int escPin4  = A3;
     int counter = 0;
+
     float motorSpeed1 = 0;
     float motorSpeed2 = 0;
     float motorSpeed3 = 0;
@@ -49,6 +50,7 @@ class MotorController
     float motor2Offset = -10;
     float motor3Offset = 0;
     float motor4Offset = 0;
+
   private:
     bool runMotor1;
     bool runMotor2;
